@@ -1,10 +1,5 @@
 # SO-101 stereo camera calibration station
 
-<p>
-  <img src="docs/arm-sweep.gif" alt="The SO-101 arm sweeping a stereo camera in front of the ChArUco board" width="300">
-  <img src="docs/arm-mount.jpg" alt="The stereo camera in the printed wrist mount, facing the board" width="300">
-</p>
-
 An SO-101 robot arm holds a USB stereo camera and sweeps it in front of a printed ChArUco board. The camera records two
 sweeps, A and B; the station calibrates both lenses and the pair from them with plain OpenCV, checks the result against
 the sweep it was not fitted on, and gives a pass or fail. An operator fits a camera, presses Start (or just plugs the
@@ -66,7 +61,6 @@ station/      the station: state machine, operator page, solver, checks, arm swe
 arm/          SO-101 programs: sweep, teleoperation, preview, torque-off calibration, read-only register readers
 camera/       stereo_stream.py: the camera program (Linux, V4L2 + ffmpeg)
 hardware/     so101-wrist-mount.stl: the printed wrist mount for the OpenRobot camera
-docs/         the pictures in this README
 run.sh        start / stop / check
 ```
 

@@ -30,9 +30,6 @@ arm/*.backup.json
 *.h265
 *.hevc
 *.mjpeg
-# ...except the README's own pictures (no people in them).
-!docs/*.jpg
-!docs/*.gif
 
 .DS_Store
 .claude/
