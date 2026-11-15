@@ -60,7 +60,14 @@ MODEL = "OpenCV rational: k1 k2 p1 p2 k3 k4 k5 k6"
 LIMITS = {                                            # change them here; each check below says what it guards against
     "views": 25, "tilted": 5, "cells": 12, "fit_rms_px": 1.0, "pairs": 15,
     "holdout_median_px": 0.5, "rect_dy_median_px": 0.5, "repeat_mm": 2.5,
+    "sharpness_ratio": 2.0,
 }
+# The rectified view (both lenses straightened onto shared rows, black borders cropped away) must stay at least this wide
+# and tall, in degrees. It shrinks when the two lenses point apart or are out of line, or when a lens model is poor at the
+# edges. 108 x 78 suits lenses of about 112 degrees across, like the camera this was built for; set STATION_RECT_FOV to
+# "<across>x<up>" for other lenses, or to "0x0" to switch the check off.
+RECT_FOV = tuple(float(v) for v in os.environ.get("STATION_RECT_FOV", "108x78").lower().split("x"))
+SHARP_PAD = 12                                        # pixels around the board's corners included in its sharpness
 TERM = (cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 100, 1e-7)
 
 
@@ -137,7 +144,22 @@ def _detect(item):
     if det is None:
         det = _local.det = B.make_detector()
     w = g.shape[1] // 2
-    return n, [B.detect(det, g[:, :w], MIN_CORNERS), B.detect(det, g[:, w:], MIN_CORNERS)]
+    halves = (g[:, :w], g[:, w:])
+    found = [B.detect(det, h, MIN_CORNERS) for h in halves]
+    return n, found, [board_sharpness(h, f) for h, f in zip(halves, found)]
+
+
+def board_sharpness(gray, found):
+    """Sharpness of the board area only (variance of the Laplacian inside the corners' bounding box), or None.
+    The whole picture is mostly room and sky, which says nothing about the lens; the board's squares are the same
+    target for both lenses, so a lens that scores far lower than its partner is blurred (dirty, filmed or out of focus)."""
+    if found is None:
+        return None
+    (x0, y0), (x1, y1) = found[1].min(0), found[1].max(0)
+    h, w = gray.shape
+    x0, y0 = max(0, int(x0) - SHARP_PAD), max(0, int(y0) - SHARP_PAD)
+    x1, y1 = min(w, int(x1) + SHARP_PAD), min(h, int(y1) + SHARP_PAD)
+    return round(B.sharpness(gray[y0:y1, x0:x1]), 1) if x1 - x0 > 20 and y1 - y0 > 20 else None
 
 
 def detect_recording(path):
@@ -145,16 +167,16 @@ def detect_recording(path):
     video = find_video(path)
     w, h = probe(video)
     fps, expo = recording_timing(video)
-    out = {}
+    out, sharp = {}, {}
     with ThreadPoolExecutor(max_workers=max(2, (os.cpu_count() or 4) - 1)) as ex:
         pending = []
         for item in frames(video, w, h):
             pending.append(ex.submit(_detect, (item[0], item[1].copy())))
             if len(pending) > 64:                                  # keep memory bounded
-                n, d = pending.pop(0).result(); out[n] = d
+                n, d, s = pending.pop(0).result(); out[n] = d; sharp[n] = s
         for f in pending:
-            n, d = f.result(); out[n] = d
-    return {"video": str(video), "size": (w // 2, h), "fps": fps, "exposure_s": expo, "frames": out}
+            n, d, s = f.result(); out[n] = d; sharp[n] = s
+    return {"video": str(video), "size": (w // 2, h), "fps": fps, "exposure_s": expo, "frames": out, "sharp": sharp}
 
 
 # ---------------------------------------------------------------- choosing views
@@ -308,6 +330,16 @@ def lens_checks(lens, label):
     ]
 
 
+def sharpness_ratio(rec):
+    """Median board sharpness of each lens over the frames where both lenses see the board, and the sharper lens's median
+    divided by the blurrier one's. About 1 for a good camera."""
+    both = [s for n, s in rec.get("sharp", {}).items() if s[0] and s[1]]
+    if len(both) < 10:
+        return None, None
+    med = [float(np.median([s[i] for s in both])) for i in (0, 1)]
+    return [round(m, 1) for m in med], round(max(med) / max(min(med), 1e-6), 3)
+
+
 def lens_part(det, rec, eye):
     views = distinct(rec, still(rec, (eye,)), eye)
     if len(views) < 6:
@@ -317,6 +349,12 @@ def lens_part(det, rec, eye):
 
 def first_check(rec_a, det):
     lenses, checks = {}, []
+    med, ratio = sharpness_ratio(rec_a)
+    if ratio is not None:
+        blurred = "left" if med[0] < med[1] else "right"
+        checks.append(check("lens sharpness ratio", ratio, LIMITS["sharpness_ratio"], "max",
+                            f"the {blurred} lens is much blurrier than the other on the same board (board sharpness {med[0]:g} left, "
+                            f"{med[1]:g} right): a dirty, filmed or out-of-focus lens"))
     for eye, label in ((0, "left"), (1, "right")):
         lens, n = lens_part(det, rec_a, eye)
         if lens is None:
@@ -347,12 +385,13 @@ def write_yaml(path, size, L, R, st, rect):
 
 def cache_key(video):
     s = Path(video).stat()
-    return f"{Path(video).resolve()}|{s.st_size}|{int(s.st_mtime)}|{STEP}"
+    return f"v2|{Path(video).resolve()}|{s.st_size}|{int(s.st_mtime)}|{STEP}"
 
 
 def save_detections(path, rec):
     data = {"key": cache_key(rec["video"]), "size": rec["size"], "fps": rec["fps"], "exposure_s": rec["exposure_s"],
-            "frames": {str(n): [None if e is None else [e[0].tolist(), e[1].tolist()] for e in d] for n, d in rec["frames"].items()}}
+            "frames": {str(n): [None if e is None else [e[0].tolist(), e[1].tolist()] for e in d] for n, d in rec["frames"].items()},
+            "sharp": {str(n): s for n, s in rec.get("sharp", {}).items()}}
     path.write_text(json.dumps(data))
 
 
@@ -364,7 +403,8 @@ def load_detections(path, video):
     if data.get("key") != cache_key(video):
         return None
     fr = {int(n): [None if e is None else (np.array(e[0], np.int32), np.array(e[1], np.float32)) for e in d] for n, d in data["frames"].items()}
-    return {"video": str(video), "size": tuple(data["size"]), "fps": data["fps"], "exposure_s": data["exposure_s"], "frames": fr}
+    sharp = {int(n): s for n, s in data.get("sharp", {}).items()}
+    return {"video": str(video), "size": tuple(data["size"]), "fps": data["fps"], "exposure_s": data["exposure_s"], "frames": fr, "sharp": sharp}
 
 
 def recording(path, out, name):
@@ -392,7 +432,8 @@ def cmd_check(a, out):
     log("A: fitting each lens")
     lenses, checks = first_check(rec, det)
     failed = [c for c in checks if not c["pass"]]
-    res = {"stage": "check", "pass": not failed, "failed": [c["name"] for c in failed], "why": [c["plain"] for c in failed],
+    med, ratio = sharpness_ratio(rec)
+    res = {"stage": "check", "pass": not failed, "board_sharpness_A": {"median_left_right": med, "ratio": ratio}, "failed": [c["name"] for c in failed], "why": [c["plain"] for c in failed],
            "checks": checks, "size": rec["size"], "lenses_A": {k: jsonable(v) for k, v in lenses.items()},
            "frames_A": len(rec["frames"]), "board": B.BOARD, "model": MODEL,
            "seconds": {"detect_A": round(t1 - t0, 1), "fit_A": round(time.time() - t1, 1)}}
@@ -409,6 +450,7 @@ def cmd_solve(a, b, out):
     lenses, checks = first_check(rec_a, det); secs["fit_lenses_A"] = round(time.time() - t, 1)
     res = {"stage": "solve", "size": rec_a["size"], "board": B.BOARD, "model": MODEL, "frames": {"A": len(rec_a["frames"]), "B": len(rec_b["frames"])},
            "lenses_A": {k: jsonable(v) for k, v in lenses.items()}}
+    med, ratio = sharpness_ratio(rec_a); res["board_sharpness_A"] = {"median_left_right": med, "ratio": ratio}
     if len(lenses) == 2:
         L, R = lenses["left"], lenses["right"]
         t = time.time(); log("B: held-out error per lens")
@@ -441,6 +483,13 @@ def cmd_solve(a, b, out):
                              "repeat": {"baseline_mm_B": round(float(np.linalg.norm(st_b["T"])) * 1000, 3), "translation_change_mm": round(repeat_mm, 3),
                                         "rotation_change_deg": round(rot, 4), "pairs_B": st_b["pairs"]},
                              "rectified_fov_deg": [round(float(np.degrees(2 * np.arctan(w / (2 * fx)))), 1), round(float(np.degrees(2 * np.arctan(h / (2 * fy)))), 1)]}
+            fov = res["stereo"]["rectified_fov_deg"]
+            if RECT_FOV[0] > 0:
+                checks.append(check("rectified view across deg", fov[0], RECT_FOV[0], "min",
+                                    "the rectified view is too narrow across: the lenses point apart or are out of line, or the board never reached the picture edges"))
+            if RECT_FOV[1] > 0:
+                checks.append(check("rectified view up deg", fov[1], RECT_FOV[1], "min",
+                                    "the rectified view is too short: the lenses are out of line, or the board never reached the top and bottom of the picture"))
             checks.append(check("rectified row offset median px", dy_b["median_px"], LIMITS["rect_dy_median_px"], "max",
                                 "left and right rows do not line up after rectification on recording B"))
             checks.append(check("repeat mm", repeat_mm, LIMITS["repeat_mm"], "max",

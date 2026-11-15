@@ -113,11 +113,13 @@ The calibration is fitted on recording A only. Recording B is a second, separate
 |---|---|---|
 | distinct still views per lens (A) | at least 25 | Only frames in which the board's corners move less than 1 px during the exposure are used (blur and rolling shutter spoil corners), and near-identical views count once. Too few: the fit is underdetermined. |
 | tilted views per lens (A) | at least 5 views turned 20 degrees or more | A planar board seen only face-on cannot separate focal length from distance. |
+| lens sharpness, left against right (A) | the sharper lens at most 2x the blurrier one | Both lenses look at the same board, so their board-area sharpness (variance of the Laplacian inside the board's corners) should match. A lens far blurrier than its partner is dirty, filmed or out of focus. Corners are still found on it, and its error can stay under the limit, so this is checked directly. |
 | picture reached per lens (A) | at least 12 of 16 cells | Distortion is strongest at the edges; where the board never went, the lens model is a guess. |
 | fit error per lens (A) | RMS at most 1.0 px | The model does not even describe the views it was fitted on. |
 | held-out error per lens (B) | median at most 0.5 px | Each B view's board pose is found with A's lens model fixed, and the corners projected back. Overfitting and a bad model show up here. |
 | views with the board in both lenses | at least 15 in A and in B | The stereo fit and the row check need the same corners seen by both lenses. |
 | rows lining up (B) | median at most 0.5 px | After rectification with A's stereo model, the same corner must land on the same row in both lenses; stereo matching searches along that row. |
+| rectified view (A) | at least 108 x 78 degrees | After both lenses are straightened onto shared rows and the black borders cropped, this much picture must remain. It shrinks when the lenses point apart or are out of line. 108 x 78 suits lenses of about 112 degrees across; set `STATION_RECT_FOV` (for example `90x60`, or `0x0` to switch it off) for other lenses. |
 | A against B | right-lens position differs at most 2.5 mm | The pair is fitted again on B alone (lenses fixed); a camera is rigid, so the two answers must agree. A difference means the camera or the board moved, or the result depended on the frames. |
 | banding (QC) | 0.6 on still pictures, 1.0 on recording A | Faint stripes along the sensor rows: a camera fault, not a calibration problem. Both limits are provisional. |
 

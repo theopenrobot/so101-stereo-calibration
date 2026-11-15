@@ -1,9 +1,10 @@
-The fonts in this folder are subsets, in WOFF2 form, of:
+The fonts in this folder, in WOFF2 form:
 
-  Chakra Petch (ChakraPetch-400/500/600.woff2)
+  Chakra Petch (ChakraPetch-400/500/600.woff2), subsets
   Copyright 2018 The Chakra Petch Project Authors (https://github.com/m4rc1e/Chakra-Petch)
 
-  IBM Plex Mono (IBMPlexMono-400/500.woff2)
+  IBM Plex Mono (IBMPlexMono-400/500.woff2), the unmodified upstream files IBMPlexMono-Regular.woff2 and
+  IBMPlexMono-Medium.woff2 from @ibm/plex-mono 1.1.0 (https://github.com/IBM/plex)
   Copyright 2017 IBM Corp. with Reserved Font Name "Plex"
 
 Both are licensed under the SIL Open Font License, Version 1.1, reproduced below.

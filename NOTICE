@@ -1,7 +1,7 @@
 SO-101 stereo camera calibration station
-Copyright 2026 the authors of this repository
+Copyright 2026 OpenRobot
 
 Licensed under the Apache License, Version 2.0 (LICENSE).
 
-station/fonts/ holds subsets of Chakra Petch and IBM Plex Mono, under the SIL Open Font License 1.1
+station/fonts/ holds Chakra Petch (subsets) and IBM Plex Mono (unmodified), under the SIL Open Font License 1.1
 (station/fonts/OFL.txt), not under the Apache License.
