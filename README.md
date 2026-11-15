@@ -1,9 +1,21 @@
 # SO-101 stereo camera calibration station
 
+<p>
+  <img src="docs/arm-sweep.gif" alt="The SO-101 arm sweeping a stereo camera in front of the ChArUco board" width="300">
+  <img src="docs/arm-mount.jpg" alt="The stereo camera in the printed wrist mount, facing the board" width="300">
+</p>
+
 An SO-101 robot arm holds a USB stereo camera and sweeps it in front of a printed ChArUco board. The camera records two
 sweeps, A and B; the station calibrates both lenses and the pair from them with plain OpenCV, checks the result against
 the sweep it was not fitted on, and gives a pass or fail. An operator fits a camera, presses Start (or just plugs the
 camera in), waits about four minutes, reads the verdict and swaps the camera.
+
+Built and tested with the [OpenRobot stereo camera](https://theopenrobot.com) (two 1920 x 1200 lenses, side by side in
+one 3840 x 1200 picture). Another USB stereo camera that sends both lenses side by side as MJPEG should also work; see
+"What you need".
+
+> **Safety.** The arm moves by itself during a sweep. Keep people out of its reach while it moves, and keep the arm's
+> power plug within reach: the software limits are not a hardware stop.
 
 `ARCHITECTURE.md` is the canonical shape: which program owns what, and the one path a camera takes.
 
@@ -11,9 +23,10 @@ camera in), waits about four minutes, reads the verdict and swaps the camera.
 
 - An SO-101 follower arm (the "white" arm in the code) with its USB bus servo board, calibrated with LeRobot. The leader
   arm (the "black" arm) is only needed for teleoperation (`arm/so101-five-joint-teleop.py`); a sweep never uses it.
-- A camera mount on the follower's wrist, so the camera looks out along the gripper.
+- A camera mount on the follower's wrist, so the camera looks out along the gripper. For the OpenRobot camera, print
+  `hardware/so101-wrist-mount.stl` (see "The wrist mount" below).
 - A USB stereo camera that delivers MJPEG with both lenses side by side in one frame (left half = left lens), e.g.
-  3840 x 1200 for two 1920 x 1200 lenses. Fixed exposure through the standard V4L2 exposure controls helps a lot.
+  3840 x 1200 for two 1920 x 1200 lenses. The station was built with the OpenRobot stereo camera. Fixed exposure through the standard V4L2 exposure controls helps a lot.
 - The ChArUco board: 12 x 9 squares of 30 mm, ArUco markers of 22 mm, dictionary DICT_5X5_1000 (88 inner corners),
   printed flat and stuck to something rigid, standing upright in front of the arm, evenly lit, without glare.
 - A Mac or Linux computer for the station (it drives the arm over USB), and a Linux machine for the camera program (a
@@ -22,6 +35,19 @@ camera in), waits about four minutes, reads the verdict and swaps the camera.
   and `numpy`; `ffmpeg` and `ffprobe`; on the camera machine also `v4l-utils` (`v4l2-ctl`).
 - Optional, on a Pi: two push buttons (Start, Stop) on the pin header (see `camera/stereo_stream.py`), and the Pi's two
   board lights as a status light.
+
+## The wrist mount
+
+`hardware/so101-wrist-mount.stl` replaces the gripper on the follower arm and holds one OpenRobot stereo camera module.
+
+1. Take the gripper (motor 6 and its jaw) off the wrist-roll motor (motor 5). Keep its four screws.
+2. Screw the mount onto the wrist-roll motor's horn with those four screws, where the gripper was.
+3. Slide the camera module's cap clip onto the mount's tongue, and put the module's own bolt through the slot in the
+   tongue. Swapping cameras is then one bolt.
+
+We printed it in PETG with 0.2 mm layers and a little support under the bar; it weighs about 13 g. The calibration
+uses only the camera's pictures, never the arm's position, so the mount only has to hold the camera firmly: a tight bolt
+is enough. For another camera, design a mount that holds it just as rigidly.
 
 ## Layout
 
@@ -39,6 +65,8 @@ station/      the station: state machine, operator page, solver, checks, arm swe
   plans/                arm sweep plans (close2 is the default)
 arm/          SO-101 programs: sweep, teleoperation, preview, torque-off calibration, read-only register readers
 camera/       stereo_stream.py: the camera program (Linux, V4L2 + ffmpeg)
+hardware/     so101-wrist-mount.stl: the printed wrist mount for the OpenRobot camera
+docs/         the pictures in this README
 run.sh        start / stop / check
 ```
 
