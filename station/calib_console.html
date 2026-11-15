@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calibration station</title>
+<link rel="stylesheet" href="/fonts/fonts.css">
+<style>
+:root{--bg:#12100d;--pan:#1d1914;--ink:#efe6d6;--mut:#b3a48d;--dim:#9c8f7c;--line:#5a4f41;--soft:#332c23;--amb:#e8a33d;--amb2:#f3c27a;--wait:#f2b544;--go:#b8d3ae;--no:#f0786e;--stop:#c2452f;--mono:'IBM Plex Mono',ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.35 'Chakra Petch',system-ui,sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.mono{font-family:var(--mono)}.lab{font-size:11px;letter-spacing:.22em;color:var(--mut);text-transform:uppercase}
+.app{min-height:100%;height:100vh;padding:14px 28px 18px;display:grid;grid-template-rows:28px minmax(0,1fr);gap:12px;min-width:1100px}
+header{display:flex;align-items:center;gap:26px;font-size:12px;letter-spacing:.18em;color:var(--mut);text-transform:uppercase;white-space:nowrap}
+header b{color:var(--ink);font-weight:600}nav{display:flex;gap:6px}
+nav button{padding:5px 14px;border:1px solid var(--line);background:transparent;color:var(--mut);letter-spacing:.18em}
+nav button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:600}
+.ok{color:var(--amb)}.bad{color:var(--no)}
+/* console */
+#console{display:grid;grid-template-rows:auto 92px minmax(0,1fr);gap:14px;min-height:0}
+.lens{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:3px 0}
+.lenswrap{position:relative;background:var(--pan);max-height:46vh;aspect-ratio:3.2;margin:auto;overflow:hidden}
+.lenswrap img{display:block;width:100%;height:100%;object-fit:contain}.lenswrap svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.half{position:absolute;top:0;bottom:0;width:50%}.half i{position:absolute;width:18px;height:18px;border:0 solid #d5be91}
+.half i:nth-child(1){left:10px;top:10px;border-left-width:2px;border-top-width:2px}.half i:nth-child(2){right:10px;top:10px;border-right-width:2px;border-top-width:2px}
+.half i:nth-child(3){left:10px;bottom:10px;border-left-width:2px;border-bottom-width:2px}.half i:nth-child(4){right:10px;bottom:10px;border-right-width:2px;border-bottom-width:2px}
+.half>span{position:absolute;left:38px;right:38px;bottom:10px;display:flex;justify-content:space-between;font-size:11px;letter-spacing:.2em;color:var(--ink);text-shadow:0 0 4px #000,0 0 2px #000}
+.stage{display:grid;grid-template-columns:210px minmax(0,1fr);gap:28px;align-items:center}
+.now{border-right:1px solid var(--line)}.now b{display:block;font-size:30px;font-weight:600;letter-spacing:.04em;line-height:1.05;text-transform:uppercase}
+.bar,.barl{display:grid;gap:3px}.bar{height:28px}.bar div{position:relative}
+.bar .done{background:var(--amb)}.bar .failed{background:var(--stop)}.bar .todo{border:1px solid var(--line)}
+.bar .nowseg{background:#3a3127;outline:1px solid var(--ink);outline-offset:2px}.bar .nowseg i{position:absolute;left:0;top:0;bottom:0;background:var(--amb2);transition:width .6s linear}
+.barl{margin-top:8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase}.barl div{white-space:nowrap;overflow:hidden;text-overflow:clip}
+.barl .todo{color:var(--mut)}.barl .nowseg{color:#fff;font-weight:600}.barl .failed{color:var(--no)}.barl span{font-family:var(--mono);color:var(--mut);font-weight:400;text-transform:none}.barl .nowseg span{color:var(--amb)}
+.panels{display:grid;grid-template-columns:1.2fr 1fr 1fr 1.25fr;gap:18px;min-height:0}
+.pn{border:1px solid var(--line);padding:16px 18px;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:10px}
+.pn.sp{justify-content:space-between}
+/* the buttons always stay on screen: long text scrolls inside the panel instead of pushing them out */
+.campn{gap:10px}.campn-text{flex:1;min-height:0;overflow:auto}
+#cable b{display:block;font-size:32px;font-weight:600;letter-spacing:.03em;line-height:1.1;margin-top:6px;text-transform:uppercase}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;letter-spacing:.08em;color:var(--mut)}.leg span{display:flex;gap:6px;align-items:center}.leg i{width:10px;height:10px}
+#camid{font-family:var(--mono);font-size:25px;font-weight:500;margin-top:6px;overflow-wrap:anywhere}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btns button{font-weight:600;letter-spacing:.12em;min-height:46px;border:0}
+#start{background:var(--ink);color:var(--bg)}#start:disabled{background:transparent;border:1px solid var(--line);color:var(--dim);cursor:not-allowed}#stop{background:var(--stop);color:#fff}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;font-size:12.5px;margin:0}.kv dt{color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kv dd{margin:0;font-family:var(--mono);text-align:right}
+.hist{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;white-space:nowrap;gap:6px 14px;font-family:var(--mono);font-size:12.5px}.hist .t{color:var(--mut)}
+/* sessions */
+#sessions{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:30px;min-height:0}
+#sessions>section,#sessions>aside{min-height:0;overflow:auto}
+.row{display:grid;grid-template-columns:236px minmax(0,1fr) 108px 176px;column-gap:16px;align-items:center;height:52px;width:100%;text-align:left;background:transparent;border:0;padding:0}
+.row.sel{background:var(--pan)}.row .name{font-size:13px;line-height:1.2;padding-left:8px}.row .name small{display:block;font-size:11.5px;color:var(--mut)}.row.sel .name{font-weight:600}.row.sel .name small{font-weight:400}
+.track{position:relative;height:52px}.track i{font-style:normal}.track::before{content:"";position:absolute;left:0;right:0;top:25px;height:1px;background:var(--line)}
+.gate{position:absolute;right:0;top:9px;bottom:9px;width:2px;background:var(--no)}.gate::after{content:"GATE";position:absolute;right:6px;top:-3px;font-size:9px;letter-spacing:.12em;color:#ffb09e}
+.nogate{position:absolute;right:0;top:18px;bottom:18px;width:1px;background:var(--line)}
+.m{position:absolute;top:12px;bottom:12px;width:2px;margin-left:-1px;background:var(--ink)}.m::after{content:"MEDIAN";position:absolute;left:-18px;bottom:-11px;font-size:9px;letter-spacing:.12em;color:var(--mut)}
+.p{position:absolute;top:15px;bottom:15px;width:0;margin-left:-1px;border-left:2px dotted var(--amb)}.p::after{content:"P95";position:absolute;left:-9px;top:-13px;font-size:9px;letter-spacing:.12em;color:var(--amb2)}
+.d{position:absolute;top:22px;width:7px;height:7px;margin-left:-4px;border-radius:50%;background:#8a7658;box-shadow:0 0 0 2px var(--bg)}.d.f{background:var(--no)}
+.s{position:absolute;top:18px;width:13px;height:13px;margin-left:-7px;border-radius:50%;background:var(--bg);border:3px solid #fff;box-shadow:0 0 0 2px var(--bg)}
+.g{font-family:var(--mono);font-size:12px;color:#ffb09e}.g.none{color:var(--dim)}
+.val{font-family:var(--mono);font-size:13px}.val b{font-weight:500;color:#fff}.val span{color:var(--mut)}.val small{display:block;font-size:11.5px;color:var(--mut);margin-top:2px}
+.grp{font-size:11px;letter-spacing:.2em;color:var(--amb);border-top:1px solid var(--line);padding:7px 0 0;margin-top:4px}
+.pick{display:grid;grid-template-columns:50px minmax(0,1fr) 50px 62px;column-gap:10px;align-items:center;min-height:40px;width:100%;padding:0 10px;background:transparent;border:1px solid var(--soft);font-family:var(--mono);font-size:13px;text-align:left;margin-bottom:6px}
+.pick[aria-pressed=true]{background:#2b2013;border-color:var(--ink)}.pick span:nth-child(1){color:var(--mut)}.pick span:nth-child(3),.pick span:nth-child(4){text-align:right}
+.idea{border:1px solid var(--amb);padding:14px 16px;margin-top:10px;display:flex;flex-direction:column;gap:10px}
+.idea .pic{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;align-items:center;font-size:13px;line-height:1.45}.idea svg{border:1px solid var(--line);background:var(--pan);width:150px;height:96px}
+.idea p{margin:0;font-size:13px;line-height:1.45;color:var(--mut)}
+.nores{font-size:12px;color:var(--mut);line-height:1.5}.nores b{color:var(--ink);font-weight:500;font-family:var(--mono)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){.bar .nowseg i{transition:none}}
+</style></head><body>
+<div class="app">
+<header><b id="h-name">Calibration station</b>
+<nav><button type="button" id="tab-console" aria-pressed="true">Console</button><button type="button" id="tab-sessions" aria-pressed="false">Sessions</button></nav>
+<div>Camera link <span id="h-link">–</span></div><div>Arm <span id="h-arm">–</span></div><div>Solver <b id="h-solver" style="font-weight:400">–</b></div>
+<div style="flex:1"></div><div id="h-right">Today <b id="h-today" style="font-weight:400">–</b></div><div class="mono" id="h-clock" style="letter-spacing:.04em;color:var(--ink)"></div></header>
+
+<main id="console">
+<section class="lens" aria-label="Live camera"><div class="lenswrap">
+<img id="live" alt="Live view from the camera on the arm: left lens on the left, right lens on the right"><svg id="dots" aria-hidden="true" preserveAspectRatio="none"></svg>
+<div class="half" style="left:0"><i></i><i></i><i></i><i></i><span><span>Left lens</span><span class="mono" id="l-left" style="letter-spacing:.02em"></span></span></div>
+<div class="half" style="left:50%"><i></i><i></i><i></i><i></i><span><span>Right lens</span><span class="mono" id="l-right" style="letter-spacing:.02em"></span></span></div>
+</div></section>
+
+<section class="stage" aria-label="Progress of this camera">
+<div class="now"><div class="lab">Now</div><b id="now-name">–</b><div class="mono" id="now-t" style="font-size:14px;color:var(--amb)">&nbsp;</div></div>
+<div><div class="bar" id="bar"></div><div class="barl" id="barl"></div></div>
+</section>
+
+<section class="panels">
+<div class="pn sp" id="cable" role="status" aria-live="polite"><div><div class="lab">Camera cable</div><b id="cable-t">Checking</b></div>
+<div><div id="cable-w" style="font-size:14px"></div><div class="mut" id="pilight" style="font-size:12px;color:var(--mut);margin-top:6px"></div>
+<div class="leg" style="margin-top:10px"><span><i style="background:var(--wait)"></i>AMBER: WAIT</span><span><i style="background:var(--go)"></i>GREEN: UNPLUG NOW</span><span><i style="background:var(--no)"></i>RED: DO NOT TOUCH</span></div></div></div>
+
+<div class="pn campn"><div style="flex:none"><div class="lab">Camera</div><div id="camid">–</div></div>
+<div class="campn-text"><div id="calib" style="font-size:13px;color:var(--mut)"></div><div id="msg" role="status" aria-live="polite" style="font-size:13px;margin-top:8px"></div></div>
+<div style="flex:none"><div class="btns"><button type="button" id="start" disabled>START</button><button type="button" id="stop">STOP</button></div>
+<div style="font-size:11px;color:var(--mut);margin-top:6px;display:flex;justify-content:space-between;gap:8px"><span>Escape stops.</span><button type="button" id="sethome" style="background:transparent;border:1px solid var(--line);color:var(--mut);font-size:11px;letter-spacing:.12em;padding:2px 8px" title="Read the arm's present pose and use it as the home pose of every sweep">SET HOME</button></div></div></div>
+
+<div class="pn" style="overflow:auto"><div class="lab">Readings</div><dl class="kv" id="read"></dl></div>
+<div class="pn"><div class="lab" style="display:flex;justify-content:space-between"><span>Last sessions</span><span>Kept</span></div><div class="hist" id="hist"></div></div>
+</section>
+</main>
+
+<main id="sessions" hidden>
+<section>
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap">
+<div id="s-title" style="font-size:19px;font-weight:600;letter-spacing:.03em"></div>
+<div class="leg" style="font-size:12px;letter-spacing:0"><span><i style="width:9px;height:9px;border-radius:50%;background:#8a7658"></i>a session</span><span><i style="width:9px;height:9px;border-radius:50%;background:var(--no)"></i>a failed one</span><span><i style="width:9px;height:9px;border-radius:50%;border:3px solid #fff;background:transparent"></i>this one</span><span><i style="width:2px;height:14px;background:var(--ink)"></i>median</span><span><i style="width:0;height:14px;border-left:2px dotted var(--amb)"></i>p95: 19 in 20 are better</span><span><i style="width:2px;height:14px;background:var(--no)"></i>gate: past this it fails</span></div></div>
+<div class="row" style="height:24px;font-size:11px;letter-spacing:.14em;color:var(--mut)"><div style="padding-left:8px">WHAT IS MEASURED</div><div style="display:flex;justify-content:space-between"><span>BEST POSSIBLE</span><span>PASSES ON THIS SIDE OF THE GATE ›</span></div><div>GATE</div><div>THIS · MEDIAN · P95</div></div>
+<div id="rows"></div>
+</section>
+<aside><div class="lab" style="margin-bottom:8px">Pick a session</div><div id="picks" style="max-height:236px;overflow:auto"></div><div class="nores" id="nores"></div>
+<div class="idea" id="idea"></div></aside>
+</main>
+</div>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* ---------- console ---------- */
+const PH={no_camera:'Waiting',checking:'Checking',not_ready:'Not ready',ready:'Ready',recording_a:'Record A',recording_b:'Record B',first_check:'First check',solving:'Solve',qc:'QC',passed:'Passed',failed:'Failed',stopped:'Stopped',error:'Problem',offline:'Station off'};
+const PILIGHT={no_camera:'green, one short wink',checking:'green, fast blink',not_ready:'green and red, steady',ready:'green, steady',recording_a:'red, blinking',recording_b:'red, blinking',first_check:'green, fast blink',solving:'green, fast blink',qc:'green, fast blink',passed:'green, double flash',failed:'red, steady',stopped:'green, steady',error:'green and red, steady'};
+const W={'Camera id':3,'Picture check':10,'Recording A':90,'Recording B':90,'First check':25,'Solve':45,'QC':10};
+const SHORT={'Camera id':'ID','Picture check':'CHECK','Recording A':'RECORD A','Recording B':'RECORD B','First check':'CHECK A','Solve':'SOLVE','QC':'QC'};
+const LV={go:'var(--go)',hold:'var(--wait)',no:'var(--no)',free:'var(--line)'};
+let liveSrc='',lastSteps='';
+function liveStream(u){if(liveSrc===u)return;liveSrc=u;$('live').src=u+'/preview?t='+Date.now()}
+$('live').addEventListener('error',()=>{const u=liveSrc;liveSrc='';setTimeout(()=>{if(u)liveStream(u)},2500)});
+function stage(s){const st=(s.view||{}).steps||[];if(!st.length){$('bar').innerHTML=$('barl').innerHTML='';return}
+  const cols=st.map(x=>(W[x.label]||10)+'fr').join(' ');$('bar').style.gridTemplateColumns=$('barl').style.gridTemplateColumns=cols;
+  const pct=x=>x.percent!=null?x.percent:Math.min(95,Math.round(100*(x.seconds||0)/(W[x.label]||10)));
+  const cls=x=>x.state==='now'?'nowseg':x.state;
+  const key=st.map(x=>x.label+x.state).join('|');
+  if(key!==lastSteps){lastSteps=key;$('bar').innerHTML=st.map(x=>'<div class="'+cls(x)+'">'+(x.state==='now'?'<i></i>':'')+'</div>').join('')}
+  const n=$('bar').querySelector('.nowseg i'),cur=st.find(x=>x.state==='now');if(n&&cur)n.style.width=pct(cur)+'%';
+  $('barl').innerHTML=st.map(x=>'<div class="'+cls(x)+'">'+((W[x.label]||10)<=10?'':esc(SHORT[x.label]||x.label)+' <span>'+(x.state==='now'?(x.seconds??0)+' s':x.seconds!=null?x.seconds+' s':'')+'</span>')+'</div>').join('');
+  $('now-name').textContent=cur?(SHORT[cur.label]||cur.label):(PH[s.phase]||s.phase);
+  $('now-t').innerHTML=cur?(cur.seconds??0)+' s &nbsp;·&nbsp; '+pct(cur)+'%':s.run_seconds!=null?s.run_seconds+' s':'&nbsp;'}
+async function stTick(){let s;try{s=await (await fetch('/api/station')).json()}catch(e){$('h-arm').textContent='NO ANSWER';$('h-arm').className='bad';return}
+  const ph=s.phase,v=s.view||{},u=v.unplug||{},k=v.calibration||{},c=s.camera||{},ck=s.check||{},r=s.result||{};
+  $('h-arm').textContent=ph==='offline'?'OFF':s.moving?'MOVING':'OK';$('h-arm').className=ph==='offline'?'bad':'ok';
+  $('h-solver').textContent=(s.solver||'–').toUpperCase();if(s.station_id)$('h-name').textContent='Calibration station · '+s.station_id.split('@')[0];
+  const td=s.today||{};$('h-today').textContent=(td.cameras_passed??0)+' CAMERAS PASSED / '+(td.cameras_tried??0)+' TRIED';
+  stage(s);
+  const col=LV[u.level]||'var(--line)';$('cable').style.borderColor=col;$('cable-t').style.color=u.level==='free'||!u.level?'var(--ink)':col;
+  $('cable-t').textContent=u.title||'–';$('cable-w').textContent=u.why||'';$('pilight').textContent=PILIGHT[ph]?'Board lights now: '+PILIGHT[ph]+'.':'';
+  $('camid').textContent=v.camera_id||(c.present?'reading id…':'no camera');$('calib').textContent=[k.title,k.detail].filter(Boolean).join('. ');
+  $('msg').textContent=(s.message||'')+(s.config_problem?' SETTINGS: '+s.config_problem:'')+((s.config||{}).home?'':' No home pose set: put the arm where the camera faces the board and press SET HOME.');$('start').disabled=!s.can_start;$('start').textContent=ph==='ready'||!s.can_start?'START':'RUN AGAIN';
+  const two=a=>a?a[0]+' / '+a[1]:null,f2=x=>x==null?null:Number(x).toFixed(2),qc=r.qc_banding||{};
+  const busy=['first_check','solving','qc','recording_a','recording_b'].includes(ph),w=busy?'waiting':'–';
+  $('read').innerHTML=[['Exposure'+(ck.exposure_picked?' (picked '+ck.exposure_picked.slice(11,16)+')':''),s.exposure_us?(s.exposure_us/1000)+' ms':null],['Board corners L / R',two(ck.corners)],['Sharpness L / R (soft under 250)',two(ck.sharpness)],
+    ['Held-out error L / R (max 0.50 px)',r.lens_error_px&&r.lens_error_px[0]!=null?f2(r.lens_error_px[0])+' / '+f2(r.lens_error_px[1]):null],['Rows lining up (max 0.50 px)',f2(r.rect_dy_px)],
+    ['Baseline',r.baseline_mm!=null?Number(r.baseline_mm).toFixed(1)+' mm':null],['A against B (max 2.5 mm)',f2(r.repeat_mm)],['Banding QC (max 1.0)',qc.left!=null?f2(Math.max(qc.left,qc.right)):null],['Checks passed',r.checks_passed||null]]
+    .map(([a,b])=>'<dt>'+a+'</dt><dd'+(b==null?' style="color:var(--dim)"':'')+'>'+esc(b??w)+'</dd>').join('');
+  $('hist').innerHTML=(s.history||[]).slice(0,7).map(h=>{const [o,oc]=OUT(h);
+    const st=h.result_dir?['RESULT','var(--go)']:h.recorded?['RECORDINGS','var(--mut)']:['',''];
+    return '<div class="t">'+esc((h.time||'').slice(11,16))+'</div><div>'+esc(h.camera||'')+'</div><div style="color:'+oc+'">'+esc(o)+'</div><div style="color:'+st[1]+';font-size:11px" title="'+esc(h.result_dir||'')+'">'+st[0]+'</div>'}).join('')||'<div class="t" style="grid-column:1/-1">No sessions yet.</div>'}
+async function liveTick(){try{const s=await (await fetch('/api/live')).json();if(s.cam_url)liveStream(s.cam_url);
+  $('h-link').textContent=s.ok?'OK':'LOST';$('h-link').className=s.ok?'ok':'bad';
+  const el=$('dots'),d=s.dots||{},rec=s.cam&&s.cam.recording,[W2,H]=s.aspect||[3840,1200],Wd=W2/2;el.setAttribute('viewBox','0 0 '+W2+' '+H);
+  el.innerHTML=(rec||s.busy||!d.cam0)?'':['cam0','cam1'].map((e,i)=>(d[e]||[]).map(p=>'<circle cx="'+((i+p[0])*Wd).toFixed(0)+'" cy="'+(p[1]*H).toFixed(0)+'" r="'+(H/110).toFixed(1)+'" fill="#e8a33d"/>').join('')).join('');
+  const e=s.eyes||{},t=x=>rec?'RECORDING':s.busy?'':x?x.corners+' CORNERS   SHARP '+x.sharpness:'';$('l-left').textContent=t(e.cam0);$('l-right').textContent=t(e.cam1)}
+  catch(e){$('h-link').textContent='NO ANSWER';$('h-link').className='bad'}}
+async function post(what){try{const r=await (await fetch('/api/station/'+what,{method:'POST'})).json();if(r.ok===false&&r.why)$('msg').textContent=r.why}catch(e){}stTick()}
+$('start').onclick=()=>post('start');$('stop').onclick=()=>post('stop');$('sethome').onclick=()=>{if(confirm('Use the arm\'s present pose as the home pose of every sweep?'))post('sethome')};
+document.addEventListener('keydown',e=>{if(e.code==='Escape')post('stop')});
+setInterval(()=>{$('h-clock').textContent=new Date().toTimeString().slice(0,8)},1000);
+/* ---------- sessions ---------- */
+const T=k=>s=>s.timing&&s.timing[k]!=null?s.timing[k]:null, okOnly=f=>s=>s.passed?f(s):null, M=k=>s=>s.m?s.m[k]:null;
+const C='stroke="#efe6d6" fill="none" stroke-width="2"',A='fill="#e8a33d"',R='stroke="#ffb09e" stroke-width="2" fill="none"',TX='fill="#b3a48d" font-size="10" font-family="sans-serif"';
+const LENS={t:'Lens error on recording B',svg:`<circle cx="52" cy="46" r="8" ${C}/><circle cx="92" cy="56" r="6" ${A}/><line x1="60" y1="48" x2="86" y2="55" ${R}/><text x="8" y="88" ${TX}>ring: predicted · dot: seen</text>`,
+ a:"The board's corners are at known positions. The lens model predicts where each corner should appear in the picture. The error is the gap between that prediction and where the corner was really seen.",
+ b:"The model is fitted on recording A and measured on recording B, which it never saw, so it cannot pass by memorising. A good model predicts most corners to within a third of a pixel; past half a pixel it no longer describes this lens."};
+const METRICS=[
+ {grp:'RESULTS: DISTANCE FROM THE GATE'},
+ {k:'lens_l',n:'Lens error, left',sub:'held out: recording B, model from A',get:M('lens_l'),best:0,gate:0.5,gl:'max 0.50 px',d:2,idea:LENS},
+ {k:'lens_r',n:'Lens error, right',sub:'the same, for the other lens',get:M('lens_r'),best:0,gate:0.5,gl:'max 0.50 px',d:2,idea:LENS},
+ {k:'rows',n:'Rows lining up',sub:'a point seen by both lenses sits on the same row',get:M('rows'),best:0,gate:0.5,gl:'max 0.50 px',d:2,idea:{t:'Rows lining up',
+  svg:`<rect x="10" y="14" width="58" height="60" ${C}/><rect x="82" y="14" width="58" height="60" ${C}/><line x1="10" y1="40" x2="140" y2="40" stroke="#5a4f41" stroke-dasharray="3 3"/><circle cx="46" cy="40" r="5" ${A}/><circle cx="104" cy="47" r="5" ${A}/><line x1="104" y1="40" x2="104" y2="47" ${R}/><text x="8" y="90" ${TX}>same point, left and right</text>`,
+  a:"After calibration both pictures are straightened (rectified) so that any point in the world lands on the same row in the left and the right picture. Depth is then found by searching along that one row.",
+  b:"This measures, on recording B, how many rows apart the same board corner still lands. Past half a pixel the row search starts missing its match and depth gets noisy, so the gate fails it."}},
+ {k:'cells',n:'Picture reached',sub:'the board must visit enough of the picture (a minimum)',get:M('cells'),best:16,gate:12,gl:'min 12 of 16',d:0,nop95:1,idea:{t:'Picture reached',
+  svg:`${[0,1,2,3].map(r=>[0,1,2,3].map(c=>`<rect x="${27+c*24}" y="${6+r*18}" width="22" height="16" ${(r*4+c)%5==4||r*4+c==3?'fill="none" stroke="#5a4f41"':'fill="#8a7658"'}/>`).join('')).join('')}<text x="8" y="92" ${TX}>filled: the board was seen here</text>`,
+  a:"The picture is split into 16 areas. An area counts once the board's corners have been seen inside it often enough. Lens distortion is strongest near the edges, so the model is only trustworthy where the board has actually been.",
+  b:"At least 12 of 16 areas must be reached in each lens. This is a minimum, so further left is better and there is no p95: the risk is the low side, where the sweep misses corners of the picture."}},
+ {k:'repeat_mm',n:'Lens position, A against B',sub:'two recordings must give the same camera',get:M('repeat_mm'),best:0,gate:2.5,gl:'max 2.5 mm',d:2,idea:{t:'Lens position, A against B',
+  svg:`<circle cx="40" cy="46" r="14" ${C}/><circle cx="104" cy="46" r="14" ${C}/><circle cx="110" cy="50" r="14" stroke="#e8a33d" fill="none" stroke-width="2" stroke-dasharray="4 3"/><line x1="104" y1="46" x2="110" y2="50" ${R}/><text x="8" y="90" ${TX}>right lens: from A, and from B</text>`,
+  a:"The camera is one rigid object, so where the right lens sits relative to the left is a fixed fact. It is worked out once from recording A and again from recording B, a separate sweep.",
+  b:"If the two answers differ by more than 2.5 mm, at least one of them is wrong: the result depended on the particular frames rather than on the camera. A pass means the answer repeats."}},
+ {k:'banding',n:'Banding (QC)',sub:'faint stripes along sensor rows',get:M('banding'),best:0,gate:1,gl:'max 1.0',d:2,idea:{t:'Banding (QC)',
+  svg:`<rect x="20" y="10" width="110" height="64" fill="#3a3127"/>${[20,34,48,62].map(y=>`<rect x="20" y="${y}" width="110" height="5" fill="#5a4f41"/>`).join('')}<text x="8" y="90" ${TX}>stripes along the rows</text>`,
+  a:"A faulty sensor or cable shows faint horizontal stripes: whole rows slightly brighter or darker than their neighbours. This looks at frames spread through recording A and measures how much row brightness jumps beyond what the scene explains.",
+  b:"This is a quality check on the hardware, separate from calibration: a camera can calibrate well and still have stripes. The limit of 1.0 is provisional: set it from your own cameras' numbers."}},
+ {grp:'TIME: FASTEST TO SLOWEST (NO GATE, PASSED CAMERAS ONLY)'},
+ {k:'t_all',n:'Whole camera',sub:'from Start to verdict',get:okOnly(s=>s.seconds),u:' s',d:0,time:1},
+ {k:'t_rec',n:'Recording A and B',sub:"the arm's two sweeps",get:okOnly(s=>T('recording_a')(s)!=null&&T('recording_b')(s)!=null?s.timing.recording_a+s.timing.recording_b:null),u:' s',d:0,time:1},
+ {k:'t_check',n:'First check',sub:'finding the board in A, fitting each lens',get:okOnly(T('first_check')),u:' s',d:0,time:1},
+ {k:'t_solve',n:'Solve',sub:'finding the board in B, stereo fit, held-out checks',get:okOnly(T('solving')),u:' s',d:0,time:1}];
+const TIMEIDEA={t:'Time',svg:`<line x1="14" y1="48" x2="136" y2="48" stroke="#5a4f41"/>${[22,40,47,60,118].map(x=>`<circle cx="${x}" cy="48" r="4" fill="#8a7658"/>`).join('')}<line x1="47" y1="34" x2="47" y2="62" stroke="#efe6d6" stroke-width="2"/><text x="8" y="90" ${TX}>fastest on the left</text>`,
+ a:"These rows have no gate: nothing fails for being slow. The left end is the fastest session so far and the right end the slowest.",
+ b:"The median is what a normal camera takes. The p95 is the slow tail, the figure to plan a day around: 19 in 20 cameras finish this step faster."};
+const OUT=h=>{const w=h.passed===true;return [w?'PASSED':String(h.outcome||'').toUpperCase(),w?'var(--amb2)':'var(--no)']};
+let SS=[],selS=null,selM='lens_l';
+const q=(a,f)=>{if(!a.length)return null;const i=f*(a.length-1),lo=Math.floor(i);return a[lo]+(a[Math.min(lo+1,a.length-1)]-a[lo])*(i-lo)};
+const ord=n=>n+(n%100>10&&n%100<14?'th':['th','st','nd','rd'][n%10]||'th');
+const P95_MIN=20;
+function drawSessions(){const withM=SS.filter(s=>s.m);if(!selS||!SS.find(s=>s.session===selS))selS=(SS[0]||{}).session;const cur=SS.find(s=>s.session===selS);
+  const pool=SS;
+  $('h-right').hidden=false;$('s-title').textContent=!cur?'No sessions yet':(cur.m?cur.camera+' against every session':cur.camera+' at '+(cur.time||'').slice(11,16)+' ended before a result');
+  $('rows').innerHTML=METRICS.map(m=>{if(m.grp)return '<div class="grp">'+m.grp+'</div>';
+    const pts=pool.map(s=>({s,v:m.get(s)})).filter(x=>x.v!=null),vals=pts.map(x=>x.v),bad=m.time?vals.slice():vals.map(v=>m.gate>m.best?v:-v);bad.sort((a,b)=>a-b);
+    const lo=m.time?Math.min(...vals):m.best,hi=m.time?Math.max(...vals):m.gate,pos=v=>hi===lo?50:Math.max(0,Math.min(100,100*(v-lo)/(hi-lo)));
+    const sign=m.time||m.gate>m.best?1:-1,med=q(bad,.5),p95=q(bad,.95),mine=cur?m.get(cur):null,f=v=>v==null?'–':Number(v).toFixed(m.d)+(m.u||'');
+    const pc=mine==null||bad.length<2?null:Math.round(100*bad.filter(v=>v<sign*mine).length/(bad.length-1));
+    return '<button type="button" class="row'+(m.k===selM?' sel':'')+'" data-m="'+m.k+'"><div class="name">'+m.n+'<small>'+m.sub+'</small></div><div class="track">'+
+      pts.filter(x=>x.s!==cur).map(x=>'<i class="d'+(x.s.outcome==='failed'?' f':'')+'" style="left:'+pos(x.v).toFixed(1)+'%" title="'+esc(x.s.camera)+': '+f(x.v)+'"></i>').join('')+
+      (med!=null?'<i class="m" style="left:'+pos(sign*med).toFixed(1)+'%"></i>':'')+(p95!=null&&!m.nop95&&bad.length>=P95_MIN?'<i class="p" style="left:'+pos(sign*p95).toFixed(1)+'%"></i>':'')+
+      (mine!=null?'<i class="s" style="left:'+pos(mine).toFixed(1)+'%"></i>':'')+'<i class="'+(m.time?'nogate':'gate')+'"></i></div><div class="g'+(m.time?' none':'')+'">'+(m.gl||'no gate')+'</div>'+
+      '<div class="val"><b>'+f(mine)+'</b> <span>'+(pc==null?'':'· '+ord(pc))+'</span><small>median '+(med==null?'–':Number(sign*med).toFixed(m.d))+(m.nop95?' · no p95':bad.length<P95_MIN?' · p95 after '+P95_MIN+' (have '+bad.length+')':' · p95 '+Number(sign*p95).toFixed(m.d))+'</small></div></button>'}).join('');
+  $('picks').innerHTML=SS.map(s=>'<button type="button" class="pick" data-s="'+esc(s.session)+'" aria-pressed="'+(s.session===selS)+'"><span>'+esc((s.time||'').slice(11,16))+'</span><span>'+esc(s.camera)+'</span><span>'+(s.seconds??'–')+' s</span><span style="color:'+OUT(s)[1]+'">'+OUT(s)[0].toLowerCase()+'</span></button>').join('');
+  const why=cur&&!cur.m?String(cur.reason||(cur.why||[]).join('; ')||cur.outcome).replace(/^\w+Error: /,''):cur&&(cur.why||[]).length?cur.why.join('; '):'';
+  $('nores').innerHTML=SS.length+' sessions, '+withM.length+' with a result to compare.'+(why?'<br><b>Why this one stopped:</b> '+esc(why):'');
+  const m=METRICS.find(x=>x.k===selM)||{},id=m.idea||TIMEIDEA;
+  $('idea').innerHTML='<div class="lab" style="color:var(--amb2)">The idea behind the highlighted row</div><div style="font-size:17px;font-weight:600">'+(m.time?m.n:id.t)+'</div><div class="pic"><svg viewBox="0 0 150 96" aria-hidden="true">'+id.svg+'</svg><div>'+id.a+'</div></div><p>'+id.b+'</p>'}
+async function loadSessions(){try{SS=await (await fetch('/api/sessions')).json();drawSessions()}catch(e){}}
+$('rows').onclick=e=>{const b=e.target.closest('[data-m]');if(b){selM=b.dataset.m;drawSessions()}};
+$('picks').onclick=e=>{const b=e.target.closest('[data-s]');if(b){selS=b.dataset.s;drawSessions()}};
+/* ---------- tabs ---------- */
+let tab='console',sTimer=null;
+function show(t){tab=t;$('console').hidden=t!=='console';$('sessions').hidden=t!=='sessions';$('tab-console').setAttribute('aria-pressed',t==='console');$('tab-sessions').setAttribute('aria-pressed',t==='sessions');
+  location.hash=t==='sessions'?'sessions':'';clearInterval(sTimer);if(t==='sessions'){loadSessions();sTimer=setInterval(loadSessions,15000)}}
+$('tab-console').onclick=()=>show('console');$('tab-sessions').onclick=()=>show('sessions');
+let pageVer=null;setInterval(async()=>{try{const v=(await (await fetch('/api/page')).json()).version;if(pageVer===null)pageVer=v;else if(v!==pageVer)location.reload()}catch(e){}},10000);
+setInterval(stTick,800);stTick();setInterval(liveTick,700);liveTick();if(location.hash==='#sessions')show('sessions');
+</script></body></html>

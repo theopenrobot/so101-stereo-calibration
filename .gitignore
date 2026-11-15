@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# This machine's settings. Never commit these.
+station.env
+*.env
+!station.env.example
+arm/arm.json
+arm/profile/calibration.json
+
+# What the station writes while it runs: recordings, results, logs, the arm's evidence files.
+/data/
+arm/so101-teleop-*.json
+arm/so101-white-registers-*.json
+arm/so101-black-registers-*.json
+arm/*.backup.json
+*.log
+*.pid
+
+# Pictures and video never belong in this repo (recordings can show people).
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.mov
+*.mkv
+*.h264
+*.h265
+*.hevc
+*.mjpeg
+
+.DS_Store
+.claude/
