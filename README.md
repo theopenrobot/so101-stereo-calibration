@@ -160,8 +160,7 @@ tilt, and the time each step took.
   within reach.
 - It does not know your bench: the sweep plans and the default home pose need checking against your arm and board.
 - It has no fisheye model; very wide lenses (beyond about 120 degrees) may need `cv2.fisheye` instead of the rational model.
-- It has been run only with one camera model at one bench; the camera program's V4L2 recording path has not been run
-  on hardware yet.
+- It has been run with one camera model at one bench. The camera SDK will be shared soon as well.
 
 ## Verification
 
