@@ -62,11 +62,14 @@ LIMITS = {                                            # change them here; each c
     "holdout_median_px": 0.5, "rect_dy_median_px": 0.5, "repeat_mm": 2.5,
     "sharpness_ratio": 2.0,
 }
-# The rectified view (both lenses straightened onto shared rows, black borders cropped away) must stay at least this wide
-# and tall, in degrees. It shrinks when the two lenses point apart or are out of line, or when a lens model is poor at the
-# edges. 108 x 78 suits lenses of about 112 degrees across, like the camera this was built for; set STATION_RECT_FOV to
-# "<across>x<up>" for other lenses, or to "0x0" to switch the check off.
-RECT_FOV = tuple(float(v) for v in os.environ.get("STATION_RECT_FOV", "108x78").lower().split("x"))
+# The rectified view (both lenses straightened onto shared rows, black borders cropped away), in degrees across x up.
+# The camera's spec is 110 x 80 degrees, plus or minus 2 degrees, so a camera fails below 108 x 78. A view above
+# 112 x 82 is reported as wider than the spec but does not fail: a wider view is not a defect. The view shrinks when the
+# two lenses point apart or are out of line, or when a lens model is poor at the edges. For other lenses set
+# STATION_RECT_FOV to "<across>x<up>" (the spec) and STATION_RECT_FOV_TOL to the tolerance; "0x0" switches the check off.
+RECT_FOV_SPEC = tuple(float(v) for v in os.environ.get("STATION_RECT_FOV", "110x80").lower().split("x"))
+RECT_FOV_TOL = float(os.environ.get("STATION_RECT_FOV_TOL", "2"))
+RECT_FOV = tuple(max(0.0, v - RECT_FOV_TOL) if v > 0 else 0.0 for v in RECT_FOV_SPEC)    # the lowest view that passes
 SHARP_PAD = 12                                        # pixels around the board's corners included in its sharpness
 TERM = (cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 100, 1e-7)
 
@@ -484,12 +487,15 @@ def cmd_solve(a, b, out):
                                         "rotation_change_deg": round(rot, 4), "pairs_B": st_b["pairs"]},
                              "rectified_fov_deg": [round(float(np.degrees(2 * np.arctan(w / (2 * fx)))), 1), round(float(np.degrees(2 * np.arctan(h / (2 * fy)))), 1)]}
             fov = res["stereo"]["rectified_fov_deg"]
+            spec = f"{RECT_FOV_SPEC[0]:g} x {RECT_FOV_SPEC[1]:g} degrees, plus or minus {RECT_FOV_TOL:g}"
+            res["stereo"]["rectified_fov_spec"] = spec
+            res["stereo"]["rectified_fov_wider_than_spec"] = [bool(RECT_FOV_SPEC[i] > 0 and fov[i] > RECT_FOV_SPEC[i] + RECT_FOV_TOL) for i in (0, 1)]
             if RECT_FOV[0] > 0:
                 checks.append(check("rectified view across deg", fov[0], RECT_FOV[0], "min",
-                                    "the rectified view is too narrow across: the lenses point apart or are out of line, or the board never reached the picture edges"))
+                                    f"the rectified view is too narrow across ({fov[0]:g} degrees; spec {spec}): the lenses point apart or are out of line, or the board never reached the picture edges"))
             if RECT_FOV[1] > 0:
                 checks.append(check("rectified view up deg", fov[1], RECT_FOV[1], "min",
-                                    "the rectified view is too short: the lenses are out of line, or the board never reached the top and bottom of the picture"))
+                                    f"the rectified view is too short ({fov[1]:g} degrees; spec {spec}): the lenses are out of line, or the board never reached the top and bottom of the picture"))
             checks.append(check("rectified row offset median px", dy_b["median_px"], LIMITS["rect_dy_median_px"], "max",
                                 "left and right rows do not line up after rectification on recording B"))
             checks.append(check("repeat mm", repeat_mm, LIMITS["repeat_mm"], "max",
